@@ -1,0 +1,55 @@
+name: PR approved and labeled
+
+on:
+  pull_request:
+    types: [opened, labeled]
+  pull_request_review:
+    types: [submitted]
+  issue_comment:
+    types: [created]
+
+jobs:
+  comment_check:
+    runs-on: ubuntu-latest
+    outputs: 
+      comment_found: steps.check.outputs.triggered
+    steps:
+      - uses: khan/pull-request-comment-trigger@v1.1.0
+        id: check
+        with:
+          trigger: '@deploy'
+          reaction: rocket
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+      - run: 'echo Found it!'
+        if: steps.check.outputs.triggered == 'true'
+
+  approved:
+    runs-on: ubuntu-latest
+    needs: [comment_check]
+    if: ${{ (github.event.review.state == 'approved') && (${{needs.comment_check.outputs.comment_found}}) }}
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - run: echo ${{ github.event.review.state }}
+
+  just_comment:
+    runs-on: ubuntu-latest
+    needs: [comment_check]
+    if: ${{ (${{needs.comment_check.outputs.comment_found}}) }}
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - run: echo ${{ github.event.review.state }}
+
+  nothing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo "$GITHUB_CONTEXT"
